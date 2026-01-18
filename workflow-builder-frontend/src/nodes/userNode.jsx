@@ -5,7 +5,7 @@ import { Handle, Position } from '@xyflow/react';
 import { useStore } from '../store'; 
 
 const UserNode = ({ id, data }) => {
-
+  console.log("Rendering UserNode with id:", id, "and data:", data);
   const updateNodeField = useStore((state) => state.updateNodeField);
   const queryChangeHandler = useCallback((e) => {
     updateNodeField(id, 'query', e.target.value);

@@ -1,53 +1,114 @@
-from fastapi import  APIRouter,  HTTPException
+import json
+from pathlib import Path
+from app.queue.valkey import queue
+from app.worker.index_document import process_rag
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from dotenv import   load_dotenv
-from app.embeddings.openai import OpenAIEmbeddingService,openai_embeddings
-from app.embeddings.geminiai import GeminiEmbeddingService
-from app.vector_store.qdrant import qdrant_store
-from app.services.document_loader import load_text_from_document
-from app.services.text_chunker import TextChunker
+from dotenv import load_dotenv
+from typing import List, Optional
+
 load_dotenv()
 
 router = APIRouter(tags=["knowledge"])
 
 class IndexRequest(BaseModel):
-    embedding_provider:str
-    embedding_model: str 
-
+    embedding_provider: str
+    embedding_model: str
+    chunks: List = []
+    
 @router.post('/knowledge/process/{document_id}')
 async def process_document(document_id: str, body: IndexRequest):
-    embedding_provider = body.embedding_provider
-    embedding_model = body.embedding_model
-    print("DocumentID",document_id)
-    # 1️⃣ Load document text (example)
-    text = load_text_from_document(document_id)  # you already have extractor
-    print("Loaded Text:",text)
-    # 2️⃣ Chunk text
-    chunker = TextChunker()
-    documents = chunker.chunk(text)  # List[Document]
-    print("Document Chunks:",documents)
+    """
+    Enqueue document indexing job for vector embedding and storage.
+    
+    Returns job_id for status tracking.
+    """
+    try:
+        payload = {
+            "document_id": document_id,
+            "embedding_provider": body.embedding_provider,
+            "embedding_model": body.embedding_model,
+            "chunks": body.chunks,
+        }
 
-    print("Embedding_Provider:",embedding_provider)
-    print("Embedding_model",embedding_model)
-    print("Chunks",documents)
-    # Here you would typically retrieve the document using the document_id
-    # and then process it (e.g., generate embeddings, store in vector database, etc.)
-    if embedding_provider.lower() == "openai":
-        OpenAIEmbeddingService(model=embedding_model)
-        print("Triggered")
-        embeddingModel = await openai_embeddings.get_embedding_model()
-        print("EmbeddingMode",embeddingModel)
-        qdrant = qdrant_store(url="http://localhost:6333",chunks=documents,embedding_model=embeddingModel)
-        vector_store = await qdrant.get_vector_store()
-        print("VectorStore",vector_store)
-        return {"message": f"Document processed with OpenAI embeddings using model {embedding_model}"}
-    elif embedding_model.lower() == 'gemini':
-        GeminiEmbeddingService(model=embedding_model)
-        qdrant = qdrant_store(url="http://localhost:6333",chunks=documents,embedding_model=embeddingModel)
-        vector_store = await qdrant.get_vector_store()
-        return {"message": f"Document processed with Gemini embeddings using model {embedding_model}"}
-    else:
-        raise HTTPException(status_code=400, detail="Invalid embedding provider")    
+        job = queue.enqueue(
+            process_rag,
+            payload,
+            job_timeout="10m",  # 10 minute timeout
+            result_ttl=3600,    # Keep result for 1 hour
+            failure_ttl=300,    # Keep failure info for 5 minutes
+        )
+        
+        print(f"[QUEUE] Job enqueued: {job.id}")
+        print(f"[QUEUE] Job status: {job.get_status()}")
+        
+        return {
+            "message": "Document indexing started",
+            "job_id": job.id,
+            "status": "queued",
+            "document_id": document_id,
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to enqueue job: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to enqueue job: {str(e)}")
 
 
-            
+@router.get("/knowledge/status/{job_id}")
+def job_status(job_id: str):
+    """
+    Get the status and result of a queued indexing job.
+    
+    Possible statuses:
+    - queued: Job is waiting to be processed
+    - started: Job is currently running
+    - finished: Job completed successfully
+    - failed: Job failed during execution
+    """
+    try:
+        job = queue.fetch_job(job_id)
+        
+        if not job:
+            print(f"[ERROR] Job not found: {job_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job {job_id} not found"
+            )
+
+        status = job.get_status()
+        print(f"[QUEUE] Job {job_id} status: {status}")
+        
+        # ✅ Build response based on status
+        response = {
+            "job_id": job.id,
+            "status": status,
+            "document_id": job.args[0].get("document_id") if job.args else None,
+        }
+        
+        # Add result only when job is finished
+        if status == "finished":
+            result = job.result
+            print(f"[QUEUE] Job {job_id} result: {result}")
+            response["result"] = result
+            response["message"] = "Document indexing completed successfully"
+        
+        # Add error info if job failed
+        elif status == "failed":
+            print(f"[QUEUE] Job {job_id} error: {job.exc_info}")
+            response["error"] = job.exc_info
+            response["message"] = "Document indexing failed"
+        
+        # Job still processing
+        elif status in ["queued", "started"]:
+            response["message"] = f"Document indexing in progress ({status})"
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch job status: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch job status: {str(e)}"
+        )
