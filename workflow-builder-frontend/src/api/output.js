@@ -46,20 +46,7 @@ export const getChatHistory = async (documentId, limit = 10, offset = 0) => {
   }
 };
 
-/**
- * Handle LLM response and prepare for display
- * 
- * Converts LLM API response into displayable format
- * 
- * @param {Object} llmResponse - Response from LLM API
- * @param {string} llmResponse.answer - The LLM answer
- * @param {Array} llmResponse.sources - Sources used
- * @param {string} llmResponse.model - Model used
- * @param {string} llmResponse.provider - Provider (openai/gemini)
- * @param {string} llmResponse.temperature - Temperature setting
- * @param {string} llmResponse.chat_id - Chat ID (if available)
- * @returns {Object} Formatted chat response for display
- */
+ 
 export const formatLLMResponse = (llmResponse) => {
   if (!llmResponse) return null;
   
@@ -171,10 +158,10 @@ export const calculateConfidenceScore = (chat) => {
   if (!chat) return 0;
   
   // Base confidence on sources
-  const sourceConfidence = Math.min(chat.sources * 20, 80);
+  const sourceConfidence = Math.min(chat.sourceResponse * 20, 80);
   
   // Boost for premium models
-  const modelBoost = chat.model && (chat.model.includes('gpt-4') || chat.model.includes('gemini')) ? 10 : 5;
+  const modelBoost = chat.llmModel && (chat.llmModel.includes('gpt-4') || chat.llmModel.includes('gemini')) ? 10 : 5;
   
   return Math.min(sourceConfidence + modelBoost, 100);
 };
@@ -200,12 +187,6 @@ export const buildFollowUpPayload = ({
   };
 };
 
-/**
- * Format timestamp for display
- * 
- * @param {string|Date} timestamp - ISO timestamp or Date object
- * @returns {string} Formatted timestamp
- */
 export const formatTimestamp = (timestamp) => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   return date.toLocaleString('en-US', {

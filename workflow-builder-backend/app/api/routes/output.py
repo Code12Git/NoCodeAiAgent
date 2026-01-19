@@ -122,13 +122,13 @@ async def get_chat_output(
             ]
         
         session.close()
-        logger.info(f"[OUTPUT] ✅ Chat output retrieved: {chat_id}")
+        logger.info(f" Chat output retrieved: {chat_id}")
         return result
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[OUTPUT] ❌ Error retrieving chat: {str(e)}")
+        logger.error(f"Error retrieving chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving chat: {str(e)}")
 
 
@@ -191,13 +191,13 @@ async def get_chat_history(request: ChatHistoryRequest):
             }
         )
         
-        logger.info(f"[OUTPUT] ✅ Retrieved {len(chats)} chats for document: {request.document_id}")
+        logger.info(f"[ Retrieved {len(chats)} chats for document: {request.document_id}")
         return response
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[OUTPUT] ❌ Error retrieving history: {str(e)}")
+        logger.error(f"Error retrieving history: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving history: {str(e)}")
 
 
@@ -219,22 +219,32 @@ async def process_follow_up_question(request: FollowUpRequest):
     try:
         logger.info(f"[OUTPUT] Processing follow-up question for chat: {request.chat_id}")
         
-        session = get_db_session()
+        # Try to verify chat and document exist (optional)
+        original_chat = None
+        doc = None
         
-        # Get the original chat for context
-        from app.database import ChatLog
-        original_chat = session.query(ChatLog).filter_by(chat_id=request.chat_id).first()
-        
-        if not original_chat:
-            logger.warning(f"[OUTPUT] Original chat not found: {request.chat_id}")
-            raise HTTPException(status_code=404, detail="Original chat session not found")
-        
-        # Verify document exists
-        doc = DocumentService.get_document(request.document_id)
-        if not doc:
-            raise HTTPException(status_code=404, detail="Document not found")
-        
-        session.close()
+        try:
+            session = get_db_session()
+            
+            # Get the original chat for context
+            from app.database import ChatLog
+            original_chat = session.query(ChatLog).filter_by(chat_id=request.chat_id).first()
+            
+            if not original_chat:
+                logger.warning(f"[OUTPUT] Original chat not found: {request.chat_id}")
+                # Don't fail - we can still process the follow-up
+            
+            # Try to verify document exists (optional)
+            from app.database import DocumentService
+            doc = DocumentService.get_document(request.document_id)
+            if not doc:
+                logger.warning(f"[OUTPUT] Document not found in database: {request.document_id}")
+                # Don't fail - document might still have embeddings in Qdrant
+            
+            session.close()
+        except Exception as db_error:
+            logger.warning(f"[OUTPUT] Database unavailable, continuing without verification: {str(db_error)}")
+            # Continue anyway - the system can still work without DB
         
         # The follow-up processing would go through the LLM endpoint
         # For now, return structured response indicating follow-up is ready
@@ -248,9 +258,9 @@ async def process_follow_up_question(request: FollowUpRequest):
             "model": request.llm_model,
             "embedding_model": request.embedding_model,
             "context": {
-                "original_query": original_chat.query,
-                "original_answer": original_chat.answer,
-                "previous_sources": original_chat.sources
+                "original_query": original_chat.query if original_chat else "Previous query",
+                "original_answer": original_chat.answer if original_chat else "Previous answer",
+                "previous_sources": original_chat.sources if original_chat else 0
             },
             "next_action": "Send follow-up query to POST /llm/process with same workflow ID"
         }
@@ -258,7 +268,7 @@ async def process_follow_up_question(request: FollowUpRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[OUTPUT] ❌ Error processing follow-up: {str(e)}")
+        logger.error(f"Error processing follow-up: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing follow-up: {str(e)}")
 
 
@@ -270,7 +280,7 @@ async def get_document_stats(document_id: str):
     Useful for analytics dashboard
     """
     try:
-        logger.info(f"[OUTPUT] Retrieving stats for document: {document_id}")
+        logger.info(f"Retrieving stats for document: {document_id}")
         
         session = get_db_session()
         
@@ -328,11 +338,11 @@ async def get_document_stats(document_id: str):
             }
         }
         
-        logger.info(f"[OUTPUT] ✅ Stats retrieved for document: {document_id}")
+        logger.info(f"Stats retrieved for document: {document_id}")
         return stats
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[OUTPUT] ❌ Error retrieving stats: {str(e)}")
+        logger.error(f"Error retrieving stats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving stats: {str(e)}")

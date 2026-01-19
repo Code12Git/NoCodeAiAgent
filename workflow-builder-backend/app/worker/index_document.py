@@ -66,15 +66,31 @@ def process_rag(job_payload: dict):
         print(f"[WORKER] Indexing {len(chunks)} chunks using {provider}/{model_name}")
 
         # ── Actually index ───────────────────────────────────────────
+        # Use force_recreate=True to handle dimension mismatches
+        # This ensures different embedding models can be used with same collection
         qdrant = QdrantVectorStore.from_documents(
             documents=documents,
             embedding=embedding_model,
             url="http://localhost:6333",
-            collection_name="rag_collection",  # Name for this dataset collection
+            collection_name="rag_collection",
+            force_recreate=True,  # ← Recreate collection if dimensions change
         )
 
 
         count = len(documents)
+
+        # ── Update document status in database ──────────────────────
+        try:
+            from app.database import DocumentService
+            DocumentService.update_document_status(
+                document_id=document_id,
+                status="indexed",
+                chunks_count=count
+            )
+            print(f"[WORKER] ✅ Document status updated in DB: {document_id}")
+        except Exception as db_error:
+            print(f"[WORKER] ⚠️ Warning: Could not update document status: {str(db_error)}")
+            # Don't fail the indexing if DB update fails
 
         result = {
             "document_id": document_id,

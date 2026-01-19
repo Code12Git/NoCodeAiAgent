@@ -22,6 +22,7 @@ export const LLMNode = ({ id, data }) => {
   console.log("LLM Node current custom prompt:", customPrompt);
   console.log("Provider",provider)
   console.log("Id",id)
+
   const llmModelUpdate = (e) => {
     const selectedModel = e.target.value;
     updateNodeField(id, 'llmModel', selectedModel);
@@ -60,13 +61,19 @@ export const LLMNode = ({ id, data }) => {
       toast.error("All fields are required and must be valid.");
       return;
     }
+
     if (!documentId) {
       toast.error("Knowledge Base document is not connected or uploaded.");
       return;
     }
+
     const res = await llmResponseApi({query: promptNode, llmModel, temperature, enable_web_search:enableWebSearch, customPrompt, model, provider,document_id:documentId})
-    updateNodeField(id, 'llmResponse', res?.output);
-    updateNodeField(id,'sourceResponse',res?.source);
+    console.log("LLM Response:", res?.answer);
+    console.log("LLM Response Sources:", res?.sources);
+    console.log("LLM Response Chat ID:", res?.chatId);
+    updateNodeField(id, 'llmResponse', res?.answer);
+    updateNodeField(id,'sourceResponse',res?.sources);
+    updateNodeField(id,'chatId',res?.chat_id);
     toast.success("LLM request processed successfully.");
   }
 

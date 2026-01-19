@@ -12,9 +12,7 @@ import { create } from "zustand";
 export const useStore = create((set, get) => ({
   nodes: [],
   edges: [],
-
-  // optional: if you want stable IDs across the app
-  nodeIDs: {}, // ← you already have something similar
+  nodeIDs: {},
 
   getNodeID: (type) => {
     set((state) => {

@@ -1,21 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { calculateConfidenceScore } from '../api/output';
+import { calculateConfidenceScore, processFollowUpQuestion } from '../api/output';
 import { useStore } from '../store';
+import toast from 'react-hot-toast';
 
 export const OutputNode = ({ id, data }) => {
   const label = data?.label || 'Output';
   const [confidence, setConfidence] = useState(0);
+  const [followUpQuestion, setFollowUpQuestion] = useState('');
+  const [isSubmittingFollowUp, setIsSubmittingFollowUp] = useState(false);
+  const [followUpResponse, setFollowUpResponse] = useState(null);
+  
+  console.log("Rendering OutputNode with id:", id, "and data:", data);
+  const llmData = useStore((state) => {
+    const llmNode = state.nodes.find((n) => n.id === 'llm-1');
+    console.log("OutputNode reading from llm-1 data:", llmNode?.data); 
+    return llmNode?.data || {};
+  });
+  console.log("LLM Data:", llmData);
 
-  const answer = useStore((state) => state.nodes.find((node) => node.id ===  'llm-1')?.data.llmResponse);
-  const source = useStore((state) => state.nodes.find((node) => node.id ===  'llm-1')?.data.source);
+  // Get Knowledge Base data for document ID
+  const knowledgeBaseNode = useStore((state) => state.nodes.find((n) => n.id === 'knowledgeBase-1'));
+  const documentId = knowledgeBaseNode?.data?.documentId;
+
   // Calculate confidence when data changes
   useEffect(() => {
-    if (data?.llm_response) {
-      const confidenceScore = calculateConfidenceScore(data.llm_response);
+    if (llmData?.llmResponse) {
+      const confidenceScore = calculateConfidenceScore(llmData);
       setConfidence(confidenceScore);
     }
-  }, [data?.llm_response]);
+  }, [llmData?.llmResponse, llmData?.chatId]);
+
+  // Handle follow-up question submission
+  const handleFollowUpSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!followUpQuestion.trim()) {
+      toast.error('Please enter a follow-up question');
+      return;
+    }
+
+    if (!llmData?.chatId) {
+      toast.error('No active chat session. Please submit a query first.');
+      return;
+    }
+
+    if (!documentId) {
+      toast.error('No document connected. Please check Knowledge Base node.');
+      return;
+    }
+
+    setIsSubmittingFollowUp(true);
+    
+    try {
+      console.log('[OUTPUT] Submitting follow-up question:', followUpQuestion);
+      
+      const response = await processFollowUpQuestion({
+        chat_id: llmData.chatId,
+        follow_up_query: followUpQuestion,
+        document_id: documentId,
+        llm_model: llmData.llmModel || 'gpt-4',
+        temperature: llmData.temperature || 0.7,
+        provider: llmData.provider || 'openai',
+        embedding_model: llmData.model || 'text-embedding-3-small'
+      });
+
+      console.log('[OUTPUT] Follow-up response received:', response);
+      setFollowUpResponse(response);
+      setFollowUpQuestion('');
+      toast.success('Follow-up question processed successfully!');
+    } catch (error) {
+      console.error('[OUTPUT] Error processing follow-up:', error);
+      toast.error('Failed to process follow-up question');
+    } finally {
+      setIsSubmittingFollowUp(false);
+    }
+  };
+
+  
 
   return (
     <div
@@ -62,63 +124,22 @@ export const OutputNode = ({ id, data }) => {
           "
         >
           <p className={data?.llm_response?.answer ? 'text-gray-800' : 'text-gray-500 italic'}>
-            {answer|| 'Waiting for response...'}
+            {llmData?.llmResponse|| 'Waiting for response...'}
           </p>
         </div>
       </div>
 
-      {/* Source/Reference Section */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-green-800 mb-2">
-          Sources ({data?.llm_response?.sources?.length || 0})
-        </label>
-        <div
-          className="
-            nodrag nopan
-            w-full
-            px-3 py-2
-            text-xs
-            text-gray-700
-            bg-green-100/30
-            border border-green-200
-            rounded-lg
-            max-h-20
-            overflow-y-auto
-          "
-        >
-          {data?.llm_response?.sources && data.llm_response.sources.length > 0 ? (
-            <ul className="space-y-1">
-              {data.llm_response.sources.map((source, idx) => (
-                <li key={idx} className="text-green-700">
-                  • {typeof source === 'string' ? source : JSON.stringify(source)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 italic">No sources referenced</p>
-          )}
-        </div>
-      </div>
+      
 
       {/* Model Information */}
       <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div>
             <p className="text-blue-700 font-medium">Model</p>
-            <p className="text-gray-700">{data?.llm_response?.model || 'N/A'}</p>
+            <p className="text-gray-700">{llmData?.llmModel || 'N/A'}</p>
           </div>
-          <div>
-            <p className="text-blue-700 font-medium">Provider</p>
-            <p className="text-gray-700">{data?.llm_response?.provider || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-blue-700 font-medium">Temp</p>
-            <p className="text-gray-700">{data?.llm_response?.temperature || '0.7'}</p>
-          </div>
-          <div>
-            <p className="text-blue-700 font-medium">Embedding</p>
-            <p className="text-gray-700 text-xs">{data?.llm_response?.embedding_model?.split('-').slice(-1)[0] || 'N/A'}</p>
-          </div>
+          
+          
         </div>
       </div>
 
@@ -140,10 +161,91 @@ export const OutputNode = ({ id, data }) => {
         </div>
       </div>
 
+      {/* Follow-Up Question Section */}
+      {llmData?.llmResponse && (
+        <div className="mb-4 border-t-2 border-green-200 pt-4">
+          <label className="block text-sm font-medium text-green-800 mb-2">
+            ❓ Follow-up Question
+          </label>
+          
+          {/* Follow-up Question Input */}
+          <form onSubmit={handleFollowUpSubmit} className="space-y-2">
+            <div>
+              <textarea
+                value={followUpQuestion}
+                onChange={(e) => setFollowUpQuestion(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                disabled={isSubmittingFollowUp}
+                className="
+                  nodrag nopan
+                  w-full
+                  px-3 py-2
+                  text-xs
+                  text-gray-800
+                  bg-white/90
+                  border border-green-200
+                  rounded-lg
+                  shadow-sm
+                  focus:outline-none
+                  focus:border-green-500
+                  focus:ring-2
+                  focus:ring-green-400/50
+                  focus:bg-white
+                  transition-all
+                  duration-150
+                  disabled:opacity-50
+                  disabled:cursor-not-allowed
+                  hover:border-green-300
+                  resize-none
+                  max-h-20
+                "
+                rows="3"
+              />
+            </div>
+            
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isSubmittingFollowUp || !followUpQuestion.trim()}
+              className="
+                nodrag nopan
+                w-full
+                px-3 py-2
+                text-xs
+                font-medium
+                text-white
+                bg-green-600
+                hover:bg-green-700
+                border border-green-700
+                rounded-lg
+                shadow-sm
+                transition-all
+                duration-200
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+                disabled:hover:bg-green-600
+              "
+            >
+              {isSubmittingFollowUp ? '⏳ Processing...' : '✉️ Send Follow-up'}
+            </button>
+          </form>
+
+          {/* Follow-up Response Display */}
+          {followUpResponse && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs font-semibold text-blue-800 mb-2">Follow-up Response:</p>
+              <p className="text-xs text-gray-800 leading-relaxed">
+                {followUpResponse?.output || followUpResponse?.answer || 'Response received'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Info Section */}
       <div className="bg-green-100/40 border border-green-200/60 rounded-lg p-3">
         <p className="text-xs text-green-800 leading-relaxed">
-          <span className="font-semibold">Features:</span> Response display, source tracking, confidence scoring
+          <span className="font-semibold">Features:</span> Response display, source tracking, confidence scoring, follow-up questions
         </p>
       </div>
 
