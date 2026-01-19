@@ -87,7 +87,6 @@ propcache==0.4.1
 proto-plus==1.27.0
 protobuf==5.29.5
 prov==2.1.1
-psycopg2==2.9.11
 psycopg2-binary==2.9.11
 puremagic==1.30
 pyasn1==0.6.1

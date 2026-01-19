@@ -1,11 +1,10 @@
-import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { useStore } from '../store';
 import toast from 'react-hot-toast';
 import { llmResponseApi } from '../api/llm';
+import { useStore } from '../store';
 export const LLMNode = ({ id, data }) => {
   const label = data?.label || 'LLM Engine';
-// knowledgeBase-1
+  // knowledgeBase-1
   const updateNodeField = useStore((state) => state.updateNodeField);
   const promptNode = useStore((state) => state.nodes.find((n) => n.id === 'user-1')?.data?.query);
   const llmModel = useStore((state) => state.nodes.find((n) => n.id === id)?.data?.llmModel);
@@ -20,8 +19,8 @@ export const LLMNode = ({ id, data }) => {
   console.log("LLM Node current temperature:", temperature);
   console.log("LLM Node current web search status:", enableWebSearch);
   console.log("LLM Node current custom prompt:", customPrompt);
-  console.log("Provider",provider)
-  console.log("Id",id)
+  console.log("Provider", provider)
+  console.log("Id", id)
 
   const llmModelUpdate = (e) => {
     const selectedModel = e.target.value;
@@ -52,12 +51,12 @@ export const LLMNode = ({ id, data }) => {
     console.log("Temperature:", temperature);
     console.log("Web Search Enabled:", enableWebSearch);
     console.log("Custom Prompt:", customPrompt);
-    console.log("PromptNode",promptNode)
-    console.log("Model from Knowledge Base Node:",model)
-    console.log("Provider from Knowledge Base Node:",provider)
+    console.log("PromptNode", promptNode)
+    console.log("Model from Knowledge Base Node:", model)
+    console.log("Provider from Knowledge Base Node:", provider)
 
     // Here you would typically trigger the LLM processing logic
-    if(!promptNode || !llmModel  ) {
+    if (!promptNode || !llmModel) {
       toast.error("All fields are required and must be valid.");
       return;
     }
@@ -67,18 +66,18 @@ export const LLMNode = ({ id, data }) => {
       return;
     }
 
-    const res = await llmResponseApi({query: promptNode, llmModel, temperature, enable_web_search:enableWebSearch, customPrompt, model, provider,document_id:documentId})
+    const res = await llmResponseApi({ query: promptNode, llmModel, temperature, enable_web_search: enableWebSearch, customPrompt, model, provider, document_id: documentId })
     console.log("LLM Response:", res?.answer);
     console.log("LLM Response Sources:", res?.sources);
     console.log("LLM Response Chat ID:", res?.chatId);
     updateNodeField(id, 'llmResponse', res?.answer);
-    updateNodeField(id,'sourceResponse',res?.sources);
-    updateNodeField(id,'chatId',res?.chat_id);
+    updateNodeField(id, 'sourceResponse', res?.sources);
+    updateNodeField(id, 'chatId', res?.chat_id);
     toast.success("LLM request processed successfully.");
   }
 
 
-   return (
+  return (
     <div
       className="
         bg-linear-to-br from-purple-50/80 to-purple-50/40
@@ -149,7 +148,7 @@ export const LLMNode = ({ id, data }) => {
             <option value="gemini-pro">Gemini Pro</option>
             <option value="gemini-1.5">Gemini 1.5</option>
           </optgroup>
-         
+
         </select>
       </div>
 
@@ -304,7 +303,7 @@ export const LLMNode = ({ id, data }) => {
         "
         title="Process LLM request"
       >
-        ▶️ Process Query
+        Process Query
       </button>
 
       {/* Input Handles */}

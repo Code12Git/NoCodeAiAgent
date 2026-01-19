@@ -163,7 +163,7 @@ async def process_rag(body: LLMRequest):
             embedding_model=body.model,
             workflow_id=None  # Optional: workflow context if available
         )
-        print(f"[LLM] ✅ Chat logged to PostgreSQL: {chat_id}")
+        print(f"[LLM]Chat logged to PostgreSQL: {chat_id}")
     except Exception as e:
         print(f"[LLM] ⚠️ Warning: Could not log chat: {str(e)}")
         # Don't fail the response if logging fails

@@ -7,7 +7,7 @@ class QdrantManager:
     def __init__(self, url: str = "http://localhost:6333", collection_name: str = "rag_collection"):
         self.url = url
         self.collection_name = collection_name
-        self._store = None  # lazy
+        self._store = None   
 
     def get_vector_store(self, embedding: Any) -> QdrantVectorStore:
         """Returns existing collection or creates it if missing"""
@@ -52,5 +52,4 @@ class QdrantManager:
         return len(docs)
 
 
-# Singleton / global instance (recommended)
 qdrant_manager = QdrantManager()

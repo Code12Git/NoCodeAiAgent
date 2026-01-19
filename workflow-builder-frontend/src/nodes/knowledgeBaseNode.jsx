@@ -21,23 +21,23 @@ const KnowledgeBaseNode = ({ id, data }) => {
     console.log("Uploaded file:", file);
     if (file) {
       try {
-        setProcessStatus('📤 Uploading document...');
+        setProcessStatus(' Uploading document...');
         await updateNodeField(id, 'fileName', file.name);
         console.log("Calling uploadKnowledgeFile with file:", file);
-        
+
         const res = await uploadKnowledgeFile(file);
         console.log("Upload response:", res);
-        
+
         setDocumentUploadId(res.document_id);
         await updateNodeField(id, 'documentId', res.document_id);
         await updateNodeField(id, 'chunksCount', res.chunks_count);
         setChunks(res.chunks);
-        
-        setProcessStatus(`✅ Document uploaded! (${res.chunks_count} chunks)`);
+
+        setProcessStatus(`Document uploaded! (${res.chunks_count} chunks)`);
         setTimeout(() => setProcessStatus(''), 3000);
       } catch (error) {
         console.error("Upload handler error:", error);
-        setProcessStatus('❌ Upload failed');
+        setProcessStatus('Upload failed');
         alert("Failed to upload document. Please try again.");
       }
     }
@@ -45,18 +45,18 @@ const KnowledgeBaseNode = ({ id, data }) => {
 
   const embeddingModelSelector = async (e) => {
     const selectedModel = e.target.value;
-    
+
     if (!documentUploadId) {
       console.error("No document uploaded yet. Please upload a document first.");
       alert("Please upload a document first before selecting an embedding model.");
       return;
     }
-    
+
     if (!selectedModel) {
       console.error("No embedding model selected.");
       return;
     }
-    
+
     let embedding_provider = '';
     if (selectedModel === 'text-embedding-3-large' || selectedModel === 'text-embedding-3-small') {
       embedding_provider = 'openai';
@@ -66,44 +66,44 @@ const KnowledgeBaseNode = ({ id, data }) => {
 
     try {
       setIsProcessing(true);
-      setProcessStatus('⏳ Enqueueing document for processing...');
-      
+      setProcessStatus(' Enqueueing document for processing...');
+
       console.log("Selected embedding model:", selectedModel);
       await updateNodeField(id, 'embeddingModel', selectedModel);
       await updateNodeField(id, 'embeddingProvider', embedding_provider);
-      
+
       // ===== STEP 1: Enqueue Job =====
       const enqueueRes = await updateModelEmbedding(selectedModel, documentUploadId, embedding_provider, chunks);
       console.log("Job enqueued:", enqueueRes);
-      
+
       const jobId = enqueueRes.job_id;
-      setProcessStatus(`⏳ Processing job: ${jobId}`);
-      
+      setProcessStatus(` Processing job: ${jobId}`);
+
       // ===== STEP 2: Poll for Results =====
       try {
         const result = await getKnowledgeResult(jobId);
-        
-        // ✅ JOB FINISHED - WE GOT THE RESULT!
-        console.log("[✅ SUCCESS] Indexing complete! Result:", result);
-        
+
+        //JOB FINISHED - WE GOT THE RESULT!
+        console.log("[SUCCESS] Indexing complete! Result:", result);
+
         await updateNodeField(id, 'indexingResult', result);
         await updateNodeField(id, 'indexingStatus', 'indexed');
-        
-        setProcessStatus(`✅ Document indexed successfully! (${result.chunks_indexed} chunks with ${embedding_provider})`);
+
+        setProcessStatus(`Document indexed successfully! (${result.chunks_indexed} chunks with ${embedding_provider})`);
         setIsProcessing(false);
-        
-        alert(`✅ Document indexed successfully!\n\n📊 Details:\n- Chunks: ${result.chunks_indexed}\n- Provider: ${embedding_provider}\n- Model: ${selectedModel}`);
-        
+
+        alert(`Document indexed successfully!\n\n📊 Details:\n- Chunks: ${result.chunks_indexed}\n- Provider: ${embedding_provider}\n- Model: ${selectedModel}`);
+
       } catch (pollError) {
-        console.error("[❌ POLLING] Error polling job result:", pollError);
-        setProcessStatus(`❌ Processing failed: ${pollError.message}`);
+        console.error("[ POLLING] Error polling job result:", pollError);
+        setProcessStatus(` Processing failed: ${pollError.message}`);
         setIsProcessing(false);
         alert(`Processing failed: ${pollError.message}`);
       }
-      
+
     } catch (error) {
       console.error("Embedding model selector error:", error);
-      setProcessStatus('❌ Enqueueing failed');
+      setProcessStatus(' Enqueueing failed');
       setIsProcessing(false);
       alert("Failed to process document. Please try again.");
     }
@@ -221,7 +221,7 @@ const KnowledgeBaseNode = ({ id, data }) => {
       {/* Result Display */}
       {data?.indexingStatus === 'indexed' && data?.indexingResult && (
         <div className="mb-4 p-3 bg-green-100/60 border border-green-400 rounded-lg text-xs text-green-900">
-          <p className="font-bold mb-2">✅ Indexing Complete!</p>
+          <p className="font-bold mb-2">Indexing Complete!</p>
           <p>• Chunks indexed: {data.indexingResult.chunks_indexed}</p>
           <p>• Provider: {data.indexingResult.embedding_provider}</p>
           <p>• Model: {data.indexingResult.embedding_model}</p>

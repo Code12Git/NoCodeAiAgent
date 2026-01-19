@@ -7,7 +7,7 @@ export const llmResponseApi = async (data) => {
         const response = await publicApi.post('/llm/process', data);
         
         console.log("LLM response data:", response.data);
-        return response.data; // { answer, sources }
+        return response.data;  
     } catch (error) {
         console.error("Error in LLM response API:", error);
         throw error;

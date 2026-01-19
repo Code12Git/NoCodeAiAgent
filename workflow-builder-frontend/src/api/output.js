@@ -17,7 +17,7 @@ export const getChatOutput = async (chatId, includeHistory = false) => {
       }
     );
     
-    console.log(`[OUTPUT API] ✅ Chat output retrieved:`, response.data);
+    console.log(`[OUTPUT API]Chat output retrieved:`, response.data);
     return response.data;
   } catch (error) {
     console.error(`[OUTPUT API] ❌ Error fetching chat output:`, error.response?.data || error.message);
@@ -38,7 +38,7 @@ export const getChatHistory = async (documentId, limit = 10, offset = 0) => {
       }
     );
     
-    console.log(`[OUTPUT API] ✅ Chat history retrieved:`, response.data);
+    console.log(`[OUTPUT API]Chat history retrieved:`, response.data);
     return response.data;
   } catch (error) {
     console.error(`[OUTPUT API] ❌ Error fetching chat history:`, error.response?.data || error.message);
@@ -64,14 +64,7 @@ export const formatLLMResponse = (llmResponse) => {
   };
 };
 
-/**
- * Get paginated chat history (helper for infinite scroll)
- * 
- * @param {string} documentId - The document ID
- * @param {number} page - Page number (0-indexed)
- * @param {number} pageSize - Items per page
- * @returns {Promise<Object>} Paginated chat history
- */
+ 
 export const getChatHistoryPaginated = async (documentId, page = 0, pageSize = 10) => {
   const offset = page * pageSize;
   return getChatHistory(documentId, pageSize, offset);
@@ -95,7 +88,7 @@ export const processFollowUpQuestion = async (followUpData) => {
       }
     );
     
-    console.log(`[OUTPUT API] ✅ Follow-up processed:`, response.data);
+    console.log(`[OUTPUT API]Follow-up processed:`, response.data);
     return response.data;
   } catch (error) {
     console.error(`[OUTPUT API] ❌ Error processing follow-up:`, error.response?.data || error.message);
@@ -112,10 +105,10 @@ export const getDocumentStats = async (documentId) => {
       `/output/document/${documentId}/stats`
     );
     
-    console.log(`[OUTPUT API] ✅ Document stats retrieved:`, response.data);
+    console.log(`[OUTPUT API]Document stats retrieved:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`[OUTPUT API] ❌ Error fetching document stats:`, error.response?.data || error.message);
+    console.error(`[OUTPUT API]  Error fetching document stats:`, error.response?.data || error.message);
     throw error;
   }
 };
@@ -136,24 +129,13 @@ export const formatChatResponse = (chat) => {
     followUpCount: chat.follow_up_count || 0
   };
 };
-
-/**
- * Extract sources from chat response
- * 
- * @param {Object} chat - Chat object
- * @returns {Array<string>} Array of source strings
- */
+ 
 export const extractSources = (chat) => {
   if (!chat || !chat.sources) return [];
   return Array(chat.sources).fill(null).map((_, i) => `Source ${i + 1}`);
 };
 
-/**
- * Calculate confidence score based on sources and model
- * 
- * @param {Object} chat - Chat object
- * @returns {number} Confidence percentage (0-100)
- */
+ 
 export const calculateConfidenceScore = (chat) => {
   if (!chat) return 0;
   
@@ -198,12 +180,7 @@ export const formatTimestamp = (timestamp) => {
   });
 };
 
-/**
- * Check if chat is recent (within last hour)
- * 
- * @param {string|Date} timestamp - Chat timestamp
- * @returns {boolean} True if recent
- */
+ 
 export const isRecentChat = (timestamp) => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   const now = new Date();

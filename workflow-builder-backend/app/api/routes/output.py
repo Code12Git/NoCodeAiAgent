@@ -219,35 +219,28 @@ async def process_follow_up_question(request: FollowUpRequest):
     try:
         logger.info(f"[OUTPUT] Processing follow-up question for chat: {request.chat_id}")
         
-        # Try to verify chat and document exist (optional)
         original_chat = None
         doc = None
         
         try:
             session = get_db_session()
             
-            # Get the original chat for context
             from app.database import ChatLog
             original_chat = session.query(ChatLog).filter_by(chat_id=request.chat_id).first()
             
             if not original_chat:
                 logger.warning(f"[OUTPUT] Original chat not found: {request.chat_id}")
-                # Don't fail - we can still process the follow-up
-            
-            # Try to verify document exists (optional)
+             
             from app.database import DocumentService
             doc = DocumentService.get_document(request.document_id)
             if not doc:
                 logger.warning(f"[OUTPUT] Document not found in database: {request.document_id}")
-                # Don't fail - document might still have embeddings in Qdrant
-            
+             
             session.close()
         except Exception as db_error:
             logger.warning(f"[OUTPUT] Database unavailable, continuing without verification: {str(db_error)}")
-            # Continue anyway - the system can still work without DB
-        
-        # The follow-up processing would go through the LLM endpoint
-        # For now, return structured response indicating follow-up is ready
+          
+         
         
         return {
             "status": "ready_for_processing",

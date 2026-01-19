@@ -1,5 +1,5 @@
 # app/worker/index_document.py
-# ✅ MUST BE FIRST - before any other imports
+#MUST BE FIRST - before any other imports
 import os
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
@@ -87,9 +87,9 @@ def process_rag(job_payload: dict):
                 status="indexed",
                 chunks_count=count
             )
-            print(f"[WORKER] ✅ Document status updated in DB: {document_id}")
+            print(f"[WORKER]Document status updated in DB: {document_id}")
         except Exception as db_error:
-            print(f"[WORKER] ⚠️ Warning: Could not update document status: {str(db_error)}")
+            print(f"[WORKER]Warning: Could not update document status: {str(db_error)}")
             # Don't fail the indexing if DB update fails
 
         result = {
@@ -101,13 +101,13 @@ def process_rag(job_payload: dict):
             "message": f"Indexed {count} chunks successfully"
         }
 
-        print(f"[WORKER] ✅ Success → {result}")
+        print(f"[WORKER]Success → {result}")
         return result
 
     except Exception as e:
         import traceback
         msg = f"Indexing failed: {str(e)}"
-        print(f"[WORKER] ❌ ERROR: {msg}")
+        print(f"[WORKER]  ERROR: {msg}")
         print(f"[WORKER] Traceback: {traceback.format_exc()}")
         return {
             "document_id": job_payload.get("document_id"),

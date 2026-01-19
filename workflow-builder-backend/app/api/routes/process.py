@@ -78,7 +78,7 @@ def job_status(job_id: str):
         status = job.get_status()
         print(f"[QUEUE] Job {job_id} status: {status}")
         
-        # ✅ Build response based on status
+        #Build response based on status
         response = {
             "job_id": job.id,
             "status": status,

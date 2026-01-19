@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { llmResponseApi } from '../api/llm';
 import { calculateConfidenceScore, processFollowUpQuestion } from '../api/output';
 import { useStore } from '../store';
-import toast from 'react-hot-toast';
 
 export const OutputNode = ({ id, data }) => {
   const label = data?.label || 'Output';
@@ -10,13 +11,18 @@ export const OutputNode = ({ id, data }) => {
   const [followUpQuestion, setFollowUpQuestion] = useState('');
   const [isSubmittingFollowUp, setIsSubmittingFollowUp] = useState(false);
   const [followUpResponse, setFollowUpResponse] = useState(null);
-  
-  console.log("Rendering OutputNode with id:", id, "and data:", data);
+  const model = useStore((state) => state.nodes.find((n) => n.id === 'knowledgeBase-1')?.data?.embeddingModel);
   const llmData = useStore((state) => {
     const llmNode = state.nodes.find((n) => n.id === 'llm-1');
-    console.log("OutputNode reading from llm-1 data:", llmNode?.data); 
+    console.log("OutputNode reading from llm-1 data:", llmNode?.data);
     return llmNode?.data || {};
   });
+  // Prefer the latest follow-up output; otherwise fall back to the base LLM response
+  const displayResponse = followUpResponse?.output || followUpResponse?.answer || followUpResponse?.llmResponse || llmData?.llmResponse;
+
+  console.log("Rendering OutputNode with id:", id, "and data:", data);
+  const provider = useStore((state) => state.nodes.find((n) => n.id === 'knowledgeBase-1')?.data?.embeddingProvider);
+
   console.log("LLM Data:", llmData);
 
   // Get Knowledge Base data for document ID
@@ -34,7 +40,7 @@ export const OutputNode = ({ id, data }) => {
   // Handle follow-up question submission
   const handleFollowUpSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!followUpQuestion.trim()) {
       toast.error('Please enter a follow-up question');
       return;
@@ -51,10 +57,10 @@ export const OutputNode = ({ id, data }) => {
     }
 
     setIsSubmittingFollowUp(true);
-    
+
     try {
       console.log('[OUTPUT] Submitting follow-up question:', followUpQuestion);
-      
+
       const response = await processFollowUpQuestion({
         chat_id: llmData.chatId,
         follow_up_query: followUpQuestion,
@@ -67,6 +73,12 @@ export const OutputNode = ({ id, data }) => {
 
       console.log('[OUTPUT] Follow-up response received:', response);
       setFollowUpResponse(response);
+      const res = await llmResponseApi({ query: followUpQuestion, llmModel: llmData.llmModel, temperature: llmData.temperature, enable_web_search: llmData.enableWebSearch, customPrompt: llmData.customPrompt, model: model, provider: provider, document_id: documentId });
+      console.log('[OUTPUT] LLM API response for follow-up:', res);
+      // Prefer the authoritative llmResponse from the API when present
+      if (res) {
+        setFollowUpResponse(res);
+      }
       setFollowUpQuestion('');
       toast.success('Follow-up question processed successfully!');
     } catch (error) {
@@ -77,7 +89,7 @@ export const OutputNode = ({ id, data }) => {
     }
   };
 
-  
+
 
   return (
     <div
@@ -123,13 +135,13 @@ export const OutputNode = ({ id, data }) => {
             leading-relaxed
           "
         >
-          <p className={data?.llm_response?.answer ? 'text-gray-800' : 'text-gray-500 italic'}>
-            {llmData?.llmResponse|| 'Waiting for response...'}
+          <p className={displayResponse ? 'text-gray-800' : 'text-gray-500 italic'}>
+            {displayResponse || 'Waiting for response...'}
           </p>
         </div>
       </div>
 
-      
+
 
       {/* Model Information */}
       <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -138,8 +150,8 @@ export const OutputNode = ({ id, data }) => {
             <p className="text-blue-700 font-medium">Model</p>
             <p className="text-gray-700">{llmData?.llmModel || 'N/A'}</p>
           </div>
-          
-          
+
+
         </div>
       </div>
 
@@ -167,7 +179,7 @@ export const OutputNode = ({ id, data }) => {
           <label className="block text-sm font-medium text-green-800 mb-2">
             ❓ Follow-up Question
           </label>
-          
+
           {/* Follow-up Question Input */}
           <form onSubmit={handleFollowUpSubmit} className="space-y-2">
             <div>
@@ -202,7 +214,7 @@ export const OutputNode = ({ id, data }) => {
                 rows="3"
               />
             </div>
-            
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -226,19 +238,11 @@ export const OutputNode = ({ id, data }) => {
                 disabled:hover:bg-green-600
               "
             >
-              {isSubmittingFollowUp ? '⏳ Processing...' : '✉️ Send Follow-up'}
+              {isSubmittingFollowUp ? ' Processing...' : 'Send Follow-up'}
             </button>
           </form>
 
-          {/* Follow-up Response Display */}
-          {followUpResponse && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-semibold text-blue-800 mb-2">Follow-up Response:</p>
-              <p className="text-xs text-gray-800 leading-relaxed">
-                {followUpResponse?.output || followUpResponse?.answer || 'Response received'}
-              </p>
-            </div>
-          )}
+
         </div>
       )}
 

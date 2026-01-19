@@ -38,16 +38,16 @@ async def upload_document(file: UploadFile = File(...)):
                     embedding_model="text-embedding-3-small",  # Default, will be updated
                     file_size=file.size if file.size else None
                 )
-                print(f"[UPLOAD] ✅ Document record created in database: {document_id}")
+                print(f"[UPLOAD]Document record created in database: {document_id}")
             except Exception as import_error:
                 print(f"[UPLOAD] ℹ️ Database not available, skipping document record: {str(import_error)}")
                 # Continue without database - document still uploaded successfully
         except Exception as e:
-            print(f"[UPLOAD] ⚠️ Warning: {str(e)}")
+            print(f"[UPLOAD]  Warning: {str(e)}")
         
         return { "document_id": filename, "chunks_count": len(chunks_docs), "chunks": chunks_docs }
     
     except Exception as e:
-        print(f"[UPLOAD] ❌ Error uploading document: {str(e)}")
+        print(f"[UPLOAD]  Error uploading document: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error uploading document: {str(e)}")
 

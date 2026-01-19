@@ -9,7 +9,7 @@ Use this when:
 3. You want a fresh start
 4. Starting over with new embeddings
 
-⚠️ WARNING: This will DELETE ALL indexed documents in Qdrant!
+WARNING: This will DELETE ALL indexed documents in Qdrant!
 """
 
 import sys
@@ -28,49 +28,49 @@ def reset_qdrant_collection(url: str = "http://localhost:6333", collection_name:
     """
     try:
         print(f"\n{'='*60}")
-        print(f"🗑️  RESETTING QDRANT COLLECTION")
+        print(f"  RESETTING QDRANT COLLECTION")
         print(f"{'='*60}")
         
-        print(f"\n📍 Connecting to Qdrant at: {url}")
+        print(f"\n Connecting to Qdrant at: {url}")
         client = QdrantClient(url=url)
         
-        print(f"🔍 Checking for collection: {collection_name}")
+        print(f" Checking for collection: {collection_name}")
         collections = client.get_collections()
         
         collection_exists = False
         for collection in collections.collections:
             if collection.name == collection_name:
                 collection_exists = True
-                print(f"   ✅ Found collection: {collection_name}")
-                print(f"   📊 Vectors: {collection.points_count}")
+                print(f"  Found collection: {collection_name}")
+                print(f"    Vectors: {collection.points_count}")
                 break
         
         if not collection_exists:
-            print(f"   ⚠️  Collection '{collection_name}' not found (already deleted?)")
+            print(f"     Collection '{collection_name}' not found (already deleted?)")
             return True
         
-        print(f"\n⚠️  WARNING: This will delete ALL {collection_exists and collections.collections[0].points_count or 'all'} vectors!")
+        print(f"\n  WARNING: This will delete ALL {collection_exists and collections.collections[0].points_count or 'all'} vectors!")
         response = input("Type 'yes' to confirm deletion: ").strip().lower()
         
         if response != "yes":
-            print("❌ Cancelled. Collection preserved.")
+            print(" Cancelled. Collection preserved.")
             return False
         
-        print(f"\n🗑️  Deleting collection: {collection_name}")
+        print(f"\n  Deleting collection: {collection_name}")
         client.delete_collection(collection_name=collection_name)
         
-        print(f"✅ Collection deleted successfully!")
+        print(f" Collection deleted successfully!")
         
         # Verify deletion
         collections = client.get_collections()
         for collection in collections.collections:
             if collection.name == collection_name:
-                print(f"❌ ERROR: Collection still exists!")
+                print(f" ERROR: Collection still exists!")
                 return False
         
-        print(f"✅ VERIFIED: Collection no longer exists")
+        print(f" VERIFIED: Collection no longer exists")
         print(f"\n{'='*60}")
-        print(f"✅ RESET COMPLETE")
+        print(f" RESET COMPLETE")
         print(f"{'='*60}")
         print(f"\nNext steps:")
         print(f"1. Upload documents via: POST /knowledge/upload")
@@ -81,7 +81,7 @@ def reset_qdrant_collection(url: str = "http://localhost:6333", collection_name:
         return True
         
     except Exception as e:
-        print(f"❌ ERROR: {str(e)}")
+        print(f" ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         collection_name = sys.argv[2]
     
-    print(f"\n📝 Configuration:")
+    print(f"\n Configuration:")
     print(f"   URL: {url}")
     print(f"   Collection: {collection_name}")
     

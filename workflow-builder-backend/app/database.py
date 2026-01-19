@@ -151,9 +151,9 @@ def init_db():
     """Initialize database - create all tables"""
     try:
         Base.metadata.create_all(engine)
-        print("[DB] ✅ Database tables created/verified")
+        print("[DB]Database tables created/verified")
     except Exception as e:
-        print(f"[DB] ❌ Error initializing database: {str(e)}")
+        print(f"[DB]  Error initializing database: {str(e)}")
         raise
 
 
@@ -189,11 +189,11 @@ class DocumentService:
             )
             session.add(doc)
             session.commit()
-            print(f"[DB] ✅ Document created: {document_id}")
+            print(f"[DB]  Document created: {document_id}")
             return doc
         except Exception as e:
             session.rollback()
-            print(f"[DB] ❌ Error creating document: {str(e)}")
+            print(f"[DB]  Error creating document: {str(e)}")
             raise
         finally:
             close_db_session(session)
@@ -220,11 +220,11 @@ class DocumentService:
                     doc.chunks_count = chunks_count
                 doc.updated_at = datetime.utcnow()
                 session.commit()
-                print(f"[DB] ✅ Document updated: {document_id} → {status}")
+                print(f"[DB]Document updated: {document_id} → {status}")
             return doc
         except Exception as e:
             session.rollback()
-            print(f"[DB] ❌ Error updating document: {str(e)}")
+            print(f"[DB]  Error updating document: {str(e)}")
             raise
         finally:
             close_db_session(session)
@@ -266,11 +266,11 @@ class ChatLogService:
             )
             session.add(log)
             session.commit()
-            print(f"[DB] ✅ Chat log created: {chat_id}")
+            print(f"[DB]Chat log created: {chat_id}")
             return log
         except Exception as e:
             session.rollback()
-            print(f"[DB] ❌ Error creating chat log: {str(e)}")
+            print(f"[DB]  Error creating chat log: {str(e)}")
             raise
         finally:
             close_db_session(session)
@@ -306,11 +306,11 @@ class WorkflowService:
             )
             session.add(workflow)
             session.commit()
-            print(f"[DB] ✅ Workflow created: {workflow_id}")
+            print(f"[DB]Workflow created: {workflow_id}")
             return workflow
         except Exception as e:
             session.rollback()
-            print(f"[DB] ❌ Error creating workflow: {str(e)}")
+            print(f"[DB]  Error creating workflow: {str(e)}")
             raise
         finally:
             close_db_session(session)
